@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "echo-server"
+version = "0.1.0"
+description = "Simple python echo server"
+authors = ["Robert Crupa <robertcrupa@outlook.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.10.2"
+asyncio = "^3.4.3"
+selectors = "^0.0.14"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
