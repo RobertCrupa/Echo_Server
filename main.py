@@ -1,55 +1,52 @@
 from __future__ import annotations
 
-import selectors
+import asyncio
 import socket
 
-# Let library select the best selector for our OS
-selector = selectors.DefaultSelector()
 
-# Create a TCP socket for server to listen on
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+async def echo(
+    connection: socket,
+    loop: asyncio.AbstractEventLoop,
+) -> None:
+    # Wait for data to be recieved on socket
+    while data := await loop.sock_recv(connection, 1024):
+        # Echo data back to client
+        await loop.sock_sendall(connection, data)
 
-# Set server address to localhost:8000
-server_address = ('127.0.0.1', 8000)
-server_socket.bind(server_address)
 
-# Stops blocking on socket to allow for muliple clients
-server_socket.setblocking(False)
-server_socket.listen()
+async def listen_for_connection(
+    server_socket: socket,
+    loop: asyncio.AbstractEventLoop,
+) -> None:
+    while True:
+        # Wait for new client connections
+        connection, address = await loop.sock_accept(server_socket)
+        connection.setblocking(False)
+        print(f'Recieved connection from {address}')
 
-# Register server socket for OS read notifications
-selector.register(server_socket, selectors.EVENT_READ)
+        # Spawn off new task for handling connection with client
+        asyncio.create_task(echo(connection=connection, loop=loop))
 
-while True:
-    # select returns when an event happens, returning a list of sockets
-    # to be processed, or an empty list on a timeout.
-    events: list[
-        tuple[selectors.SelectorKey, int]
-    ] = selector.select(timeout=1)
 
-    if len(events) == 0:
-        print('No Events, timeout reached')
+async def main():
 
-    for event, _ in events:
-        # Get socket where event occured
-        event_socket = event.fileobj
+    # Create a TCP socket for server to listen on
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        # This is a connection attempt on the server
-        if event_socket == server_socket:
-            connection, address = server_socket.accept()
+    # Set server address to localhost:8000
+    server_address = ('127.0.0.1', 8000)
+    server_socket.bind(server_address)
 
-            # Allow for mulitple connections
-            connection.setblocking(False)
+    # Stops blocking on socket to allow for muliple clients
+    server_socket.setblocking(False)
+    server_socket.listen()
 
-            # Register new client
-            selector.register(connection, selectors.EVENT_READ)
+    await listen_for_connection(
+        server_socket=server_socket,
+        loop=asyncio.get_event_loop(),
+    )
 
-            print(f'Server connected with {address}')
-        else:  # Recieving data from client
-
-            # Read in Kibibyte of data from socket
-            data = event_socket.recv(1024)
-            event_socket.send(data)
-
-            print(f'Echoing {data} back to client')
+asyncio.run(
+    main(),
+)
