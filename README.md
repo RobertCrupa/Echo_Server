@@ -28,4 +28,4 @@ In another terminal connect using telnet
 telnet localhost 8000
 ```
 
-![](https://github.com/RobertCrupa/Echo_Server/usage.gif)
+![](https://github.com/RobertCrupa/Echo_Server/blob/main/usage.gif)
